@@ -1,0 +1,13 @@
+{
+  "python.formatting.provider": "autopep8", // 自動整形に autopep8 を使う
+  "python.formatting.autopep8Args": [
+    // autopep8 の設定
+    // "--indent-size=2",
+    "--ignore=E111, E114, E402, E501"
+  ],
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.tabSize": 4
+  },
+  "cSpell.words": ["hellinger", "lenmax", "lenmin", "proba"]
+}
