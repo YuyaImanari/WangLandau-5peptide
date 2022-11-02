@@ -1,4 +1,5 @@
 import sys
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,6 +10,7 @@ AM = 'ACDEFGHIKLMNPQRSTVWY'
 
 
 class EstimateDoS:
+    timestamp = int(time.time())
     num_exp = 0
 
     def __init__(self, numiter, plen, E_max=0, E_min=-3, num_discretize=50):
@@ -39,7 +41,7 @@ class EstimateDoS:
         else:
             return int((E - self.E_min) / (self.E_max - self.E_min) * self.num_discretize)
 
-    def plot(self):
+    def plot(self, f_itt=-1):
         plt.clf()
         plt.close()
         E = []
@@ -48,13 +50,21 @@ class EstimateDoS:
             E.append((self.E_max - self.E_min) * (i + 0.5) / self.num_discretize + self.E_min)
             g.append(np.exp(self.S[i] - np.max(self.S)))
         plt.plot(E, g)
-        plt.savefig('gE.png')
+        if f_itt == -1:
+            plt.savefig(f'gE_{self.timestamp}.png')
+        else:
+            plt.savefig(f'gE_{self.timestamp}_{f_itt}.png')
 
     def wang_landau(self):
         f = 1.0
         x_current = self.lib.sequences[0]
         E_current = self.cal_prop(x_current)
         index_current = self.histogram_idx(E_current)
+
+        H_bin_min_all_f = self.num_discretize - 1
+        H_bin_max_all_f = 0
+
+        start_time = time.time()
 
         for f_itt in range(self.numiter):
             print("f_itt = ", f_itt)
@@ -76,13 +86,23 @@ class EstimateDoS:
                 self.S[index_current] += f
                 H[index_current] += 1
 
-                if np.min(H[np.nonzero(H)]) / np.max(H[np.nonzero(H)]) > 0.95 and np.sum(H) > 10000:
+                H_bin_min = np.nonzero(H)[0][0]
+                H_bin_max = np.nonzero(H)[0][-1]
+                if H_bin_min <= H_bin_min_all_f and H_bin_max >= H_bin_max_all_f and np.min(H[np.nonzero(H)]) / np.max(H[np.nonzero(H)]) > 0.8 and np.sum(H) > 10000:
+                    H_bin_min_all_f = H_bin_min
+                    H_bin_max_all_f = H_bin_max
                     break
+
+            # デバッグ
+            self.plot(f_itt)
 
             print("f =", f)
             print("total sampling number =", int(np.sum(H)))
 
             f = f / 2
+
+        print("total time =", time.time() - start_time)
+        print("number of experiments =", self.num_exp)
 
 if __name__ == '__main__':
     numiter = int(sys.argv[1])
