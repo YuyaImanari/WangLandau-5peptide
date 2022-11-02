@@ -10,8 +10,6 @@ AM = 'ACDEFGHIKLMNPQRSTVWY'
 
 class EstimateDoS:
     num_exp = 0
-    E = []
-    g = []
 
     def __init__(self, numiter, plen, E_max=0, E_min=-3, num_discretize=50):
         self.numiter = numiter
@@ -21,6 +19,7 @@ class EstimateDoS:
         self.E_max = E_max
         self.E_min = E_min
         self.num_discretize = num_discretize
+        self.S = np.array([1.0] * num_discretize)
 
     def incr_exp(self):
         self.num_exp += 1
@@ -41,13 +40,18 @@ class EstimateDoS:
             return int((E - self.E_min) / (self.E_max - self.E_min) * self.num_discretize)
 
     def plot(self):
-        plt.plot(self.E, self.g)
+        plt.clf()
+        plt.close()
+        E = []
+        g = []
+        for i in range(self.num_discretize):
+            E.append((self.E_max - self.E_min) * (i + 0.5) / self.num_discretize + self.E_min)
+            g.append(np.exp(self.S[i] - np.max(self.S)))
+        plt.plot(E, g)
         plt.savefig('gE.png')
-        print("number of experiments =", self.num_exp)
 
     def wang_landau(self):
         f = 1.0
-        S = np.array([1.0] * self.num_discretize)
         x_current = self.lib.sequences[0]
         E_current = self.cal_prop(x_current)
         index_current = self.histogram_idx(E_current)
@@ -64,12 +68,12 @@ class EstimateDoS:
                 E_new = self.cal_prop(x_new)
 
                 index_new = self.histogram_idx(E_current)
-                if S[index_current] > S[index_new] or np.exp(S[index_current] - S[index_new]) > np.random.rand():
+                if self.S[index_current] > self.S[index_new] or np.exp(self.S[index_current] - self.S[index_new]) > np.random.rand():
                     x_current = x_new
                     E_current = E_new
                     index_current = index_new
 
-                S[index_current] += f
+                self.S[index_current] += f
                 H[index_current] += 1
 
                 if np.min(H[np.nonzero(H)]) / np.max(H[np.nonzero(H)]) > 0.95 and np.sum(H) > 10000:
@@ -79,10 +83,6 @@ class EstimateDoS:
             print("total sampling number =", int(np.sum(H)))
 
             f = f / 2
-
-        for i in range(self.num_discretize):
-            self.E.append((self.E_max - self.E_min) * (i + 0.5) / self.num_discretize + self.E_min)
-            self.g.append(np.exp(S[i] - np.max(S)))
 
 if __name__ == '__main__':
     numiter = int(sys.argv[1])
